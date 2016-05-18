@@ -81,7 +81,7 @@ class Herodotus:
 class Marking:
  
     def __init__(self, jira, *args, **kwargs):
-        self.url = jira
+        self.url = jira + "/browse/"
         self.name = kwargs.get('name', '')
 
     def generate(self, releases, format):
@@ -104,8 +104,9 @@ class Marking:
             return changelog
         if format == 'html':
             return markdown.markdown(changelog)
-
-if __name__ == '__main__':
+            
+            
+def get_cli_args():
     parser = argparse.ArgumentParser(description='Generate changelog')
     parser.add_argument('repo',
                         metavar = 'directory',
@@ -137,10 +138,13 @@ if __name__ == '__main__':
                         dest = 'name',
                         type = str,
                         nargs = "?")    
-    args = parser.parse_args()
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    args = get_cli_args()
 
     pylog = Herodotus(args.repo[0])
     releases = pylog.get_releases(since = args.since, to = args.to)
 
-    changelog = Marking(jira = args.url + "/browse/", name = args.name).generate(releases, args.format)
+    changelog = Marking(jira = args.url, name = args.name).generate(releases, args.format)
     print(changelog)
