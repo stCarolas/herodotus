@@ -4,6 +4,7 @@ from git import Git
 from operator import methodcaller
 import re
 import markdown
+import argparse
 
 class Tag:
 
@@ -17,7 +18,7 @@ class Tag:
             self.major_version = self.match.group('major_version')
             self.minor_version = self.match.group('minor_version')
             self.name = self.main_version + "." + self.major_version + "." + self.minor_version
-            
+
     def calculate_weight(self):
         version = int(self.main_version) * 100000 + int(self.major_version) * 1000 + int(self.minor_version)
         return version
@@ -60,25 +61,45 @@ class Herodotus:
                     release.add_feature(issue)
                 releases.append(release)
         return reversed(releases)
-        
-directory = "/Users/stCarolas/NetBeansProjects/corp-rpay-catalogs-api"
-url = "http://jira/browse/"
-pylog = Herodotus(directory)
-releases = pylog.get_releases()
+     
+class Marking:
+ 
+    def __init__(self, url):
+        self.url = url
 
-changelog = "# Version History"
-for release in releases:
-    changelog += "\n### Version " + release.version + "\n"
-    if release.issues:
-        issues_list = list(release.issues)
-        overall_filter = "http://jira/issues/?jql=key%20in%20%28" + issues_list[0]
-        for i in range(1, len(release.issues)):
-            overall_filter = overall_filter + "%2C" + issues_list[i]
-        overall_filter = overall_filter + "%29"
-        changelog += "\n[View as one Jira filter](" + overall_filter + ")" + "\n\n"
-        for issue in release.issues:
-            changelog += "* [" + issue + "]" + "(" + url + issue + ")" + "\n"
+    def generate(self, releases):
+        changelog = "# Version History \n"
+        for release in releases:
+            changelog += "\n### Version " + release.version + "\n"
+            if release.issues:
+                issues_list = list(release.issues)
+                overall_filter = "http://jira/issues/?jql=key%20in%20%28" + issues_list[0]
+                for i in range(1, len(release.issues)):
+                    overall_filter = overall_filter + "%2C" + issues_list[i]
+                overall_filter = overall_filter + "%29"
+                changelog += "\n[View as one Jira filter](" + overall_filter + ")" + "\n\n"
+                for issue in release.issues:
+                    changelog += "* [" + issue + "]" + "(" + self.url + issue + ")" + "\n"
+        return changelog
 
-print(changelog)
-# html = markdown.markdown(changelog)
-# print(html)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Generate changelog')
+    parser.add_argument('repo',
+                        metavar = 'directory',
+                        type = str, 
+                        nargs = 1,
+                        help = 'git repository')
+    parser.add_argument('--jira',
+                        dest = 'url',
+                        type = str,
+                        default = 'http://jira/',
+                        help = 'jira endpoint (default - http://jira/)')
+    args = parser.parse_args()
+
+    pylog = Herodotus(args.repo)
+    releases = pylog.get_releases()
+
+    changelog = Marking(args.url + "/browse/").generate(releases)
+    print(changelog)
+    # html = markdown.markdown(changelog)
+    # print(html)
