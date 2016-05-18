@@ -8,7 +8,8 @@ import argparse
 
 class Tag:
 
-    template = '(?P<main_version>\\d*)\\.(?P<major_version>\\d*).(?P<minor_version>\\d*)'
+    # template = '(?P<main_version>\\d*)\\.(?P<major_version>\\d*).(?P<minor_version>\\d*)'
+    template = '(?P<main_version>\\d*)\\.(?P<major_version>\\d*).(?P<minor_version>\\d*)\\.?(?P<fix_version>\\d*)?'
 
     def __init__(self, git_tag):
         self.tag = git_tag
@@ -17,7 +18,10 @@ class Tag:
             self.main_version = self.match.group('main_version')
             self.major_version = self.match.group('major_version')
             self.minor_version = self.match.group('minor_version')
+            self.fix_version = self.match.group('fix_version')
             self.name = self.main_version + "." + self.major_version + "." + self.minor_version
+            if self.fix_version:
+                self.name += "." + self.fix_version
 
     def calculate_weight(self):
         version = int(self.main_version) * 100000 + int(self.major_version) * 1000 + int(self.minor_version)
