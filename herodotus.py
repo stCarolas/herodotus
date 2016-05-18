@@ -47,7 +47,15 @@ class Herodotus:
             tags.append(Tag(tag))
         return sorted(tags, key=methodcaller('calculate_weight'))
         
-    def get_all_releases(self):
+    def get_releases(self, *args, **kwargs):
+        since = kwargs.get('since', None)
+        if since:
+            since = Tag(since)
+    
+        to = kwargs.get('to', None)
+        if to:
+            to = Tag(to)
+
         tags = self.get_tags()
         releases = []
         for i in range(1, len(tags)):
@@ -55,24 +63,32 @@ class Herodotus:
             tag_before_release = tags[i-1]
             log = Git(working_dir = self.directory).log(tag_before_release.name + ".." + released_tag.name)
             issues = re.findall(self.issue_regexp, log)
-            if issues:
+            if issues \
+                and (not since \
+                     or (since.calculate_weight() <= tag_before_release.calculate_weight()) \
+                    ) \
+                and (not to \
+                     or (to.calculate_weight() >= released_tag.calculate_weight()) \
+                    ):
                 release = Release(released_tag.name)
                 for issue in issues:
                     release.add_feature(issue)
                 releases.append(release)
-        return reversed(releases)
-        
-    def get_releases(self, since, to):
-        releases = self.get_all_releases()
+        releases = reversed(releases)
         return releases
+            
      
 class Marking:
  
-    def __init__(self, url):
-        self.url = url
+    def __init__(self, jira, *args, **kwargs):
+        self.url = jira
+        self.name = kwargs.get('name', '')
 
     def generate(self, releases, format):
-        changelog = "# Version History \n"
+        changelog = "# Version History "
+        if self.name:
+            changelog += ": " + self.name
+        changelog += "\n"
         for release in releases:
             changelog += "\n### Version " + release.version + "\n"
             if release.issues:
@@ -110,16 +126,21 @@ if __name__ == '__main__':
     parser.add_argument('--since',
                         dest = 'since',
                         type = str,
-                        default = '0.0.0',
+                        default = None,
                         nargs = "?")
     parser.add_argument('--to',
                         dest = 'to',
                         type = str,
+                        default = None,
                         nargs = "?")
+    parser.add_argument('--name',
+                        dest = 'name',
+                        type = str,
+                        nargs = "?")    
     args = parser.parse_args()
 
     pylog = Herodotus(args.repo[0])
-    releases = pylog.get_releases(args.since, args.to)
+    releases = pylog.get_releases(since = args.since, to = args.to)
 
-    changelog = Marking(args.url + "/browse/").generate(releases, args.format)
+    changelog = Marking(jira = args.url + "/browse/", name = args.name).generate(releases, args.format)
     print(changelog)
