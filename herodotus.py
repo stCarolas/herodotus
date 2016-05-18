@@ -47,7 +47,7 @@ class Herodotus:
             tags.append(Tag(tag))
         return sorted(tags, key=methodcaller('calculate_weight'))
         
-    def get_releases(self):
+    def get_all_releases(self):
         tags = self.get_tags()
         releases = []
         for i in range(1, len(tags)):
@@ -61,13 +61,17 @@ class Herodotus:
                     release.add_feature(issue)
                 releases.append(release)
         return reversed(releases)
+        
+    def get_releases(self, since, to):
+        releases = self.get_all_releases()
+        return releases
      
 class Marking:
  
     def __init__(self, url):
         self.url = url
 
-    def generate(self, releases):
+    def generate(self, releases, format):
         changelog = "# Version History \n"
         for release in releases:
             changelog += "\n### Version " + release.version + "\n"
@@ -80,7 +84,10 @@ class Marking:
                 changelog += "\n[View as one Jira filter](" + overall_filter + ")" + "\n\n"
                 for issue in release.issues:
                     changelog += "* [" + issue + "]" + "(" + self.url + issue + ")" + "\n"
-        return changelog
+        if format == 'md':
+            return changelog
+        if format == 'html':
+            return markdown.markdown(changelog)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate changelog')
@@ -94,12 +101,25 @@ if __name__ == '__main__':
                         type = str,
                         default = 'http://jira/',
                         help = 'jira endpoint (default - http://jira/)')
+    parser.add_argument('--format',
+                        dest = 'format',
+                        type = str,
+                        default = 'md',
+                        nargs = "?",
+                        help = 'output format ( md or html). Default - md.')
+    parser.add_argument('--since',
+                        dest = 'since',
+                        type = str,
+                        default = '0.0.0',
+                        nargs = "?")
+    parser.add_argument('--to',
+                        dest = 'to',
+                        type = str,
+                        nargs = "?")
     args = parser.parse_args()
 
-    pylog = Herodotus(args.repo)
-    releases = pylog.get_releases()
+    pylog = Herodotus(args.repo[0])
+    releases = pylog.get_releases(args.since, args.to)
 
-    changelog = Marking(args.url + "/browse/").generate(releases)
+    changelog = Marking(args.url + "/browse/").generate(releases, args.format)
     print(changelog)
-    # html = markdown.markdown(changelog)
-    # print(html)
