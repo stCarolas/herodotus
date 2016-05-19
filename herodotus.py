@@ -9,22 +9,22 @@ import argparse
 class Tag:
 
     # template = '(?P<main_version>\\d*)\\.(?P<major_version>\\d*).(?P<minor_version>\\d*)'
-    template = '(?P<main_version>\\d*)\\.(?P<major_version>\\d*).(?P<minor_version>\\d*)\\.?(?P<fix_version>\\d*)?'
+    template = '(?P<major_version>\\d*)\\.(?P<minor_version>\\d*).(?P<patch_version>\\d*)(?P<suffix>\\.*)?'
 
     def __init__(self, git_tag):
         self.tag = git_tag
         self.match = re.search(self.template, str(git_tag))
         if self.match:
-            self.main_version = self.match.group('main_version')
             self.major_version = self.match.group('major_version')
             self.minor_version = self.match.group('minor_version')
-            self.fix_version = self.match.group('fix_version')
-            self.name = self.main_version + "." + self.major_version + "." + self.minor_version
-            if self.fix_version:
-                self.name += "." + self.fix_version
+            self.patch_version = self.match.group('patch_version')
+            self.suffix = self.match.group('suffix')
+            self.name = self.major_version + "." + self.minor_version + "." + self.patch_version
+            if self.suffix:
+                self.name += self.suffix
 
     def calculate_weight(self):
-        version = int(self.main_version) * 100000 + int(self.major_version) * 1000 + int(self.minor_version)
+        version = int(self.major_version) * 100000 + int(self.minor_version) * 1000 + int(self.patch_version)
         return version
 
 class Release:
@@ -85,7 +85,9 @@ class Herodotus:
 class Marking:
  
     def __init__(self, jira, *args, **kwargs):
-        self.url = jira + "/browse/"
+        self.url = jira 
+        self.filter_url = jira + "/issues/?jql=key%20in%20%28"
+        self.issue_url = jira + "/browse/"
         self.name = kwargs.get('name', '')
 
     def generate(self, releases, format):
@@ -97,13 +99,13 @@ class Marking:
             changelog += "\n### Version " + release.version + "\n"
             if release.issues:
                 issues_list = list(release.issues)
-                overall_filter = "http://jira/issues/?jql=key%20in%20%28" + issues_list[0]
+                overall_filter = self.filter_url + issues_list[0]
                 for i in range(1, len(release.issues)):
                     overall_filter = overall_filter + "%2C" + issues_list[i]
                 overall_filter = overall_filter + "%29"
                 changelog += "\n[View as one Jira filter](" + overall_filter + ")" + "\n\n"
                 for issue in release.issues:
-                    changelog += "* [" + issue + "]" + "(" + self.url + issue + ")" + "\n"
+                    changelog += "* [" + issue + "]" + "(" + self.issue_url + issue + ")" + "\n"
         if format == 'md':
             return changelog
         if format == 'html':
