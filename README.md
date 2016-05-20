@@ -1,3 +1,3 @@
 # herodotus
 
-Generate changog with jira issues from git tags and commit messages
+Generate changelog with links to jira issues depends on git tags and commit messages
