@@ -5,6 +5,8 @@ from operator import methodcaller
 import re
 import markdown
 import argparse
+import time
+import datetime
 
 class Tag:
 
@@ -52,27 +54,34 @@ class Herodotus:
         return sorted(tags, key=methodcaller('calculate_weight'))
         
     def get_releases(self, *args, **kwargs):
-        since = kwargs.get('since', None)
-        if since:
+        sinceTag = kwargs.get('sinceTag', None)
+        if sinceTag:
             since = Tag(since)
     
-        to = kwargs.get('to', None)
-        if to:
+        toTag = kwargs.get('toTag', None)
+        if toTag:
             to = Tag(to)
+            
+        sinceDate  = kwargs.get('sinceDate', None)
+        toDate  = kwargs.get('toDate', None)
 
         tags = self.get_tags()
         releases = []
         for i in range(1, len(tags)):
             released_tag = tags[i]
+            if sinceDate and released_tag.tagged_date < sinceDate:
+                continue
+            if toDate and released_tag.tagged_date > toDate:
+                continue
             tag_before_release = tags[i-1]
             log = Git(working_dir = self.directory).log(tag_before_release.name + ".." + released_tag.name)
             issues = re.findall(self.issue_regexp, log)
             if issues \
-                and (not since \
-                     or (since.calculate_weight() <= tag_before_release.calculate_weight()) \
+                and (not sinceTag \
+                     or (sinceTag.calculate_weight() <= tag_before_release.calculate_weight()) \
                     ) \
-                and (not to \
-                     or (to.calculate_weight() >= released_tag.calculate_weight()) \
+                and (not toTag \
+                     or (toTag.calculate_weight() >= released_tag.calculate_weight()) \
                     ):
                 release = Release(released_tag.name)
                 for issue in issues:
@@ -80,8 +89,7 @@ class Herodotus:
                 releases.append(release)
         releases = reversed(releases)
         return releases
-            
-     
+
 class Marking:
  
     def __init__(self, jira, *args, **kwargs):
@@ -130,13 +138,23 @@ def get_cli_args():
                         default = 'md',
                         nargs = "?",
                         help = 'output format ( md or html). Default - md.')
-    parser.add_argument('--since',
-                        dest = 'since',
+    parser.add_argument('--sinceTag',
+                        dest = 'sinceTag',
                         type = str,
                         default = None,
                         nargs = "?")
-    parser.add_argument('--to',
-                        dest = 'to',
+    parser.add_argument('--toTag',
+                        dest = 'toTag',
+                        type = str,
+                        default = None,
+                        nargs = "?")
+    parser.add_argument('--sinceDate',
+                        dest = 'sinceDate',
+                        type = str,
+                        default = None,
+                        nargs = "?")
+    parser.add_argument('--toDate',
+                        dest = 'toDate',
                         type = str,
                         default = None,
                         nargs = "?")
@@ -150,7 +168,11 @@ if __name__ == '__main__':
     args = get_cli_args()
 
     pylog = Herodotus(args.repo[0])
-    releases = pylog.get_releases(since = args.since, to = args.to)
+    releases = pylog.get_releases(sinceTag = args.sinceTag,
+                                     toTag = args.toTag,
+                                 sinceDate = args.sinceDate,
+                                    toDate = args.toDate)
 
-    changelog = Marking(jira = args.url, name = args.name).generate(releases, args.format)
-    print(changelog)
+    marking = Marking(jira = args.url,
+                      name = args.name)
+    print(marking.generate(releases, args.format))
