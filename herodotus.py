@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-from git import Repo
-from git import Git
+from git import Repo, Git
 from operator import methodcaller
 import re
 import markdown
 import argparse
-import time
-import datetime
+import time, datetime
+import requests, json
 
 class Tag:
 
@@ -19,7 +18,7 @@ class Tag:
             self.major_version = self.match.group('major_version')
             self.minor_version = self.match.group('minor_version')
             self.patch_version = self.match.group('patch_version')
-            self.suffix = self.match.group('suffix')
+            self.suffix = self.match.group('suffix')    
             self.name = self.major_version + "." + self.minor_version + "." + self.patch_version
             if self.suffix:
                 self.name += self.suffix
@@ -68,9 +67,9 @@ class Herodotus:
         releases = []
         for i in range(1, len(tags)):
             released_tag = tags[i]
-            if sinceDate and released_tag.tagged_date < sinceDate:
+            if sinceDate and released_tag.tag.commit.committed_date < sinceDate:
                 continue
-            if toDate and released_tag.tagged_date > toDate:
+            if toDate and released_tag.tag.commit.committed_date > toDate:
                 continue
             tag_before_release = tags[i-1]
             log = Git(working_dir = self.directory).log(tag_before_release.name + ".." + released_tag.name)
@@ -93,8 +92,8 @@ class Marking:
  
     def __init__(self, jira, *args, **kwargs):
         self.url = jira 
-        self.filter_url = jira + "/issues/?jql=key%20in%20%28"
-        self.issue_url = jira + "/browse/"
+        self.filter_url = jira + "issues/?jql=key%20in%20%28"
+        self.issue_url = jira + "browse/"
         self.name = kwargs.get('name', '')
 
     def generate(self, releases, format):
@@ -166,12 +165,19 @@ def get_cli_args():
 
 if __name__ == '__main__':
     args = get_cli_args()
-    project = args.repo[0]
-    pylog = Herodotus(project)
+    pylog = Herodotus(args.repo[0])
+
+    sinceDate = None
+    if args.sinceDate:
+        sinceDate = time.mktime(datetime.datetime.strptime(args.sinceDate, "%d.%m.%Y").timetuple())
+
+    toDate = None
+    if args.toDate:
+        toDate = time.mktime(datetime.datetime.strptime(args.toDate, "%d.%m.%Y").timetuple())
     releases = pylog.get_releases(sinceTag = args.sinceTag,
                                      toTag = args.toTag,
-                                 sinceDate = args.sinceDate,
-                                    toDate = args.toDate)
+                                 sinceDate = sinceDate,
+                                    toDate = toDate)
 
     marking = Marking(jira = args.url,
                       name = args.name)
