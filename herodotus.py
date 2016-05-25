@@ -98,9 +98,10 @@ class Marking:
         self.name = kwargs.get('name', '')
 
     def generate(self, releases, format):
-        changelog = "# Version History "
         if self.name:
-            changelog += ": " + self.name
+            changelog = "# " + self.name
+        else:
+            changelog = "# Version History "
         changelog += "\n"
         for release in releases:
             changelog += "\n### Version " + release.version + "\n"
@@ -165,8 +166,8 @@ def get_cli_args():
 
 if __name__ == '__main__':
     args = get_cli_args()
-
-    pylog = Herodotus(args.repo[0])
+    project = args.repo[0]
+    pylog = Herodotus(project)
     releases = pylog.get_releases(sinceTag = args.sinceTag,
                                      toTag = args.toTag,
                                  sinceDate = args.sinceDate,
