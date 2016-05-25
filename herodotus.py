@@ -10,7 +10,6 @@ import datetime
 
 class Tag:
 
-    # template = '(?P<main_version>\\d*)\\.(?P<major_version>\\d*).(?P<minor_version>\\d*)'
     template = '(?P<major_version>\\d*)\\.(?P<minor_version>\\d*).(?P<patch_version>\\d*)(?P<suffix>\\.*)?'
 
     def __init__(self, git_tag):
@@ -161,7 +160,7 @@ def get_cli_args():
     parser.add_argument('--name',
                         dest = 'name',
                         type = str,
-                        nargs = "?")    
+                        nargs = "?")
     return parser.parse_args()
 
 if __name__ == '__main__':
