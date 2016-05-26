@@ -35,7 +35,7 @@ class Release:
         
     def add_feature(self, issue_number):
         self.issues.add(issue_number)
-        
+
 class Herodotus:
 
     issue_regexp = "([A-Z]+-\\d+)"
@@ -69,7 +69,7 @@ class Herodotus:
             released_tag = tags[i]
             if sinceDate and released_tag.tag.commit.committed_date < sinceDate:
                 continue
-            if toDate and released_tag.tag.commit.committed_date > toDate:
+            if toDate and released_tag.tag.commit.committed_date > toDate:  
                 continue
             tag_before_release = tags[i-1]
             log = Git(working_dir = self.directory).log(tag_before_release.name + ".." + released_tag.name)
@@ -87,13 +87,19 @@ class Herodotus:
                 releases.append(release)
         releases = reversed(releases)
         return releases
+        
+    def get_unreleased(self):
+        tags = self.get_tags()
+        last_tag = tags[len(tags) - 1]
+        log = Git(working_dir = self.directory).log("HEAD.." + last_tag.name)
+        return re.findall(self.issue_regexp, log)
 
 class Marking:
  
     def __init__(self, jira, *args, **kwargs):
         self.url = jira 
-        self.filter_url = jira + "issues/?jql=key%20in%20%28"
-        self.issue_url = jira + "browse/"
+        self.filter_url = jira + "/issues/?jql=key%20in%20%28"
+        self.issue_url = jira + "/browse/"
         self.name = kwargs.get('name', '')
 
     def generate(self, releases, format):
@@ -165,6 +171,7 @@ def get_cli_args():
 
 if __name__ == '__main__':
     args = get_cli_args()
+
     pylog = Herodotus(args.repo[0])
 
     sinceDate = None
