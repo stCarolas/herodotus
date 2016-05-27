@@ -90,9 +90,10 @@ class Herodotus:
         
     def get_unreleased(self):
         tags = self.get_tags()
-        last_tag = tags[len(tags) - 1]
-        log = Git(working_dir = self.directory).log("HEAD.." + last_tag.name)
-        return re.findall(self.issue_regexp, log)
+        if tags:
+            last_tag = tags[len(tags) - 1]
+            log = Git(working_dir = self.directory).log(last_tag.name + "..HEAD")
+            return re.findall(self.issue_regexp, log)
 
 class Marking:
  
