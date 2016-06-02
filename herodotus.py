@@ -104,6 +104,8 @@ class Marking:
         self.name = kwargs.get('name', '')
 
     def generate(self, releases, format):
+        if format == 'confluence':
+            return Markup().generate(releases, self.name)
         if self.name:
             changelog = "# " + self.name
         else:
@@ -124,6 +126,27 @@ class Marking:
             return changelog
         if format == 'html':
             return markdown.markdown(changelog)
+
+class Markup:
+
+    def generate(self, releases, name):
+        markup = "<h1>{}</h1>".format(name)
+        for release in releases:
+            markup += "\n<h3>{}</h3>".format(release.version)
+            if release.issues:
+                issues_list = list(release.issues)
+                issues_keys = "(" + issues_list[0]
+                for i in range(1, len(issues_list)):
+                    issues_keys += "," + issues_list[i]
+                issues_keys += ")"
+                markup += '<ac:structured-macro ac:macro-id="265309dc-e728-46d0-9220-d9a62a5b3ff0" ac:name="jira" ac:schema-version="1"> \
+                              <ac:parameter ac:name="server">Alfa-bank Issue Tracker</ac:parameter> \
+                              <ac:parameter ac:name="columns">key,summary,type,created,updated,assignee,reporter,priority,status,resolution</ac:parameter> \
+                              <ac:parameter ac:name="maximumIssues">1000</ac:parameter> \
+                              <ac:parameter ac:name="jqlQuery">key in ({})  </ac:parameter> \
+                              <ac:parameter ac:name="serverId">44d31d35-adcb-3fea-91bb-b1562f182f16</ac:parameter> \
+                           </ac:structured-macro>'.format(issues_keys)
+        return markup
             
             
 def get_cli_args():
